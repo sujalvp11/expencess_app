@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from datetime import datetime, date
+from collections import defaultdict
 
 # Import the shared db instance and model from your models.py file
 from app.models import db, Expense
@@ -7,6 +8,7 @@ from app.models import db, Expense
 def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = 'mysecretkey'
 
     # 1. First, tie the database instance to this specific Flask app
@@ -16,9 +18,55 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    CATEGORIES = ['Food', 'Transport', 'Rent', 'Utilities', 'Health']
+
+    def parse_date_or_none(s: str):
+        if not s:
+            return None  
+        try:
+            return datetime.strptime(s, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+        
+        
     @app.route("/")
     def index():
-        return render_template('index.html')
+        start_str = (request.args.get("start") or "").strip()
+        end_str = (request.args.get("end") or "").strip() 
+        selected_category = (request.args.get("category") or "").strip()
+
+        # Parse dates safely
+        start_date = parse_date_or_none(start_str)
+        end_date = parse_date_or_none(end_str) 
+
+        if start_date and end_date and end_date < start_date:
+            flash("End date cannot be before start date", "error")
+            start_date = end_date = None
+            start_str = end_str = ""
+
+        q = Expense.query
+        if start_date:
+            q = q.filter(Expense.date >= start_date)
+        if end_date:
+            q = q.filter(Expense.date <= end_date)
+        if selected_category:
+            q = q.filter(Expense.category == selected_category)
+
+        expenses = q.order_by(Expense.date.desc(), Expense.id.desc()).all()
+        total = round(sum(e.amount for e in expenses), 2) 
+
+        return render_template(
+            "index.html",
+            categories=CATEGORIES,
+            today=date.today().isoformat(),
+            expenses=expenses,
+            total=total,
+            start_str=start_str,
+            end_str=end_str,
+            selected_category=selected_category,
+        )
+
+
 
     @app.route("/add", methods=['POST'])
     def add():
@@ -49,6 +97,14 @@ def create_app():
         db.session.commit()
             
         flash("Expense added", "success")
+        return redirect(url_for("index"))
+
+    @app.route("/delete/<int:expense_id>", methods=['POST'])
+    def delete(expense_id):
+        e = Expense.query.get_or_404(expense_id)
+        db.session.delete(e)
+        db.session.commit()
+        flash("Expense deleted", "success")
         return redirect(url_for("index"))
 
     return app

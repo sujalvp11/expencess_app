@@ -29,10 +29,12 @@
           class="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-900 p-4"
         >
           <h2 class="text-lg font-semibold mb-3">Filters</h2>
-          <form class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end pr-5">
+          <form method="get" action="{{ url_for('index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end pr-5">
             <label class="text-sm">
               <span class="block mb-1 text-slate-300">Start</span>
               <input
+                name="start"
+                value="{{start_str or ''}}"
                 type="date"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
               />
@@ -40,19 +42,24 @@
             <label class="text-sm">
               <span class="block mb-1 text-slate-300">End</span>
               <input
+                name="end"
+                value="{{end_str or ''}}"
                 type="date"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
               />
             </label>
             <label class="text-sm md:col-span-2">
               <span class="block mb-1 text-slate-300">Category</span>
-              <select
+              <select name="category"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
               >
                 <option value="">All</option>
-                <option>Food</option>
-                <option>Transport</option>
-                <option>Utilities</option>
+
+                {% for c in categories %}
+
+                <option value="{{ c }}" {% if selected_category == c %} selected {% endif %}>{{ c }}</option>
+
+                {% endfor %}
               </select>
             </label>
             <div class="flex gap-2">
@@ -62,9 +69,9 @@
               >
                 Apply
               </button>
-              <a
+                <a
                 class="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 border border-slate-700"
-                href="#"
+                href="{{ url_for('index') }}"
                 >Reset</a
               >
             </div>
@@ -73,10 +80,8 @@
           <!-- Total -->
           <div class="mt-4 text-sm text-slate-300">
             <span class="mr-2">Total:</span>
-            <span
-              class="inline-block rounded-xl border border-slate-700 bg-slate-800 px-3 py-1 font-semibold"
-            >
-              $0.00
+            <span class="inline-block rounded-xl border border-slate-700 bg-slate-800 px-3 py-1 font-semibold">
+              ${{ '%.2f'|format(total or 0) }}
             </span>
           </div>
 
@@ -128,11 +133,9 @@
               <span class="mb-1 block text-slate-300">Category</span>
               <select name="category"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
-              >
-                <option>Food</option>
-                <option>Transport</option>
-                <option>Rent</option>
-                <option>Utilities</option>
+              >{% for c in categories %}
+              <option value="{{c}}">{{c}}</option>
+              {% endfor %}
               </select>
             </label>
             <button
@@ -151,49 +154,54 @@
         <span
           class="inline-block rounded-xl border border-slate-700 bg-slate-800 px-3 py-1 font-semibold"
         >
-          $0.00
+          ${{ '%.2f'|format(total or 0) }}
         </span>
       </div>
 
-      <!-- Expenses table -->
-      <section class="rounded-2xl border border-slate-800 bg-slate-900">
-        <div class="px-4 py-3 border-b border-slate-800">
-          <h2 class="text-lg font-semibold">Expenses</h2>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead class="text-slate-300 bg-slate-800/50">
-              <tr>
-                <th class="text-left px-4 py-3">Date</th>
-                <th class="text-left px-4 py-3">Description</th>
-                <th class="text-left px-4 py-3">Category</th>
-                <th class="text-right px-4 py-3">Amount</th>
-                <th class="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="border-t border-slate-800 hover:bg-slate-800/30">
-                <td class="px-4 py-2">2025-09-25</td>
-                <td class="px-4 py-2">Groceries</td>
-                <td class="px-4 py-2">Food</td>
-                <td class="px-4 py-2 text-right">$25.00</td>
-                <td class="px-4 py-2 text-right">
-                  <button
-                    class="text-rose-300 hover:text-rose-200 text-xs border border-rose-400/30 px-3 py-1 rounded-lg"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td colspan="5" class="px-4 py-6 text-center text-slate-400">
-                  No expenses yet — add your first one above.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+       <!-- Expenses table --> 
+<section class="rounded-2xl border border-slate-800 bg-slate-900"> 
+    <div class="px-4 py-3 border-b border-slate-800"> 
+        <h2 class="text-lg font-semibold">Expenses</h2> 
+    </div> 
+    <div class="overflow-x-auto"> 
+        <table class="min-w-full text-sm"> 
+            <thead class="text-slate-300 bg-slate-800/50"> 
+                <tr> 
+                    <th class="text-left px-4 py-3">Date</th> 
+                    <th class="text-left px-4 py-3">Description</th> 
+                    <th class="text-left px-4 py-3">Category</th> 
+                    <th class="text-right px-4 py-3">Amount</th> 
+                    <th class="px-4 py-3"></th> 
+                </tr> 
+            </thead> 
+            <tbody> 
+                {% if expenses %} 
+                  {% for e in expenses %} 
+                    <tr class="border-t border-slate-800 hover:bg-slate-800/30"> 
+                        <td class="px-4 py-2">{{ e.date.strftime("%Y-%m-%d") if e.date else '' }}</td> 
+                        <td class="px-4 py-2">{{ e.description }}</td> 
+                        <td class="px-4 py-2">{{ e.category }}</td> 
+                        <td class="px-4 py-2 text-right">${{ '%.2f'|format(e.amount) }}</td> 
+                        <td class="px-4 py-2 text-right">
+                          <form method="post" action="{{ url_for('delete', expense_id=e.id) }}" onsubmit="return confirm('Delete this expense?');">
+                            <button type="submit" class="text-rose-300 hover:text-rose-200 text-xs border border-rose-400/30 px-3 py-1 rounded-lg">
+                              Delete
+                            </button>
+                          </form>
+                        </td>
+                    </tr> 
+                    {% endfor %} 
+                {% else %} 
+                    <tr> 
+                        <td colspan="5" class="px-4 py-6 text-center text-slate-400"> 
+                            No expenses yet — add your first one above. 
+                        </td> 
+                    </tr> 
+                {% endif %} 
+            </tbody> 
+        </table> 
+    </div> 
+</section>
 
       <!-- Charts -->
       <section class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
